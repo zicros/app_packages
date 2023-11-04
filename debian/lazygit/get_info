@@ -1,0 +1,22 @@
+#!/usr/bin/bash
+
+PKG_REPO=jesseduffield/lazygit
+PKG_REGEX=lazygit_[.0-9]*_Linux_x86_64.tar.gz
+
+if [[ -f "info.json" ]]; then
+    INFO=$(cat info.json)
+else
+    INFO=$(get_latest_github_package_info "${PKG_REPO}" "${PKG_REGEX}")
+fi
+
+PKG_DOWNLOAD_URL=$(echo "$INFO" | jq ".browser_download_url" | sed 's/"//g')
+PKG_NAME=$(echo "$INFO" | jq ".name" | sed 's/"//g' | awk -F '_' '{ print $1 }')
+PKG_VERSION=$(echo "$INFO" | jq ".name" | sed 's/"//g' | awk -F '_' '{ print $2 }')
+
+cat << EOF
+{
+"name" : "$PKG_NAME",
+"version" : "$PKG_VERSION",
+"download_url" : "$PKG_DOWNLOAD_URL"
+}
+EOF

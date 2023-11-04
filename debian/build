@@ -1,0 +1,48 @@
+#!/usr/bin/bash
+
+if [[ $# != 1 ]]; then
+    echo "$0 <PROJECT>"
+    exit 1
+fi
+
+PROJECT=$1
+OUT_PATH=./out
+DEBIAN_FILE_PATH=./$PROJECT/debian
+INFO=$(./$PROJECT/get_info)
+NAME=$(echo "$INFO" | jq ".name" | sed 's/"//g')
+VERSION=$(echo "$INFO" | jq ".version" | sed 's/"//g')
+DOWNLOAD_URL=$(echo "$INFO" | jq ".download_url" | sed 's/"//g')
+FOLDER_NAME=$NAME-$VERSION
+OUT_FOLDER_PATH=$OUT_PATH/$NAME-$VERSION
+TAR_FILENAME=${NAME}_$VERSION.orig.tar.gz
+TAR_FILE_PATH=$OUT_PATH/$TAR_FILENAME
+
+if ! [[ -f "$OUT_PATH" ]]; then
+    mkdir -p "$OUT_PATH"
+fi
+
+if ! [[ -f "$TAR_FILE_PATH" ]]; then
+    echo "Downloading $DOWNLOAD_URL"
+    curl -s -L -o "$TAR_FILE_PATH" "$DOWNLOAD_URL" || exit 1
+else
+    echo "TAR file already exists: $TAR_FILE_PATH"
+fi
+
+echo "Creating $FOLDER_NAME"
+mkdir -p "$OUT_FOLDER_PATH" || exit 1
+
+echo "Extracting $TAR_FILE_PATH"
+tar xvf "$TAR_FILE_PATH" -C "$OUT_FOLDER_PATH" || exit 1
+
+echo "Building..."
+pushd "$OUT_FOLDER_PATH"
+dh_make -s -y
+
+if [[ -d "$DEBIAN_FILE_PATH" ]]; then
+    echo "Copying custom debian files"
+    cp -f ../debian/* ./debian/
+fi
+
+dpkg-buildpackage -uc -us || popd && exit 1
+popd
+
