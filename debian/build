@@ -5,10 +5,12 @@ if [[ $# != 1 ]]; then
     exit 1
 fi
 
+SCRIPT_ROOT=$PWD/${0%/*}
 PROJECT=$1
-OUT_PATH=./out
-DEBIAN_FILE_PATH=./$PROJECT/debian
-INFO=$(./$PROJECT/get_info)
+PROJECT_ROOT=$SCRIPT_ROOT/$PROJECT
+OUT_PATH=$SCRIPT_ROOT/out
+DEBIAN_FILE_PATH=$PROJECT_ROOT/debian
+INFO=$($PROJECT_ROOT/get_info)
 NAME=$(echo "$INFO" | jq ".name" | sed 's/"//g')
 VERSION=$(echo "$INFO" | jq ".version" | sed 's/"//g')
 DOWNLOAD_URL=$(echo "$INFO" | jq ".download_url" | sed 's/"//g')
@@ -38,9 +40,10 @@ echo "Building..."
 pushd "$OUT_FOLDER_PATH"
 dh_make -s -y
 
+echo "Checking for custom debian files: $DEBIAN_FILE_PATH"
 if [[ -d "$DEBIAN_FILE_PATH" ]]; then
     echo "Copying custom debian files"
-    cp -f ../debian/* ./debian/
+    cp -f $DEBIAN_FILE_PATH/* ./debian/
 fi
 
 dpkg-buildpackage -uc -us || popd && exit 1
